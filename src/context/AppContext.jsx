@@ -39,6 +39,10 @@ function usePersistedState(key, defaultValue) {
  
   return [state, setState]
 }
+
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(0, 10)
+const isValidTask = (task) => Boolean(String(task?.title || '').trim() && String(task?.agent || '').trim() && String(task?.due || '').trim())
  
  
 // ─────────────────────────────
@@ -152,9 +156,30 @@ export function AppProvider({ children }) {
   // Leads CRUD
   // ─────────────────────────────
   const addLead = useCallback((lead) => {
+    const normalizedPhone = normalizePhone(lead.phone)
+    const trimmedName = String(lead.name || '').trim()
+    const trimmedCompany = String(lead.company || '').trim()
+    const trimmedEmail = String(lead.email || '').trim()
+
+    if (!trimmedName || !trimmedCompany || !trimmedEmail || !normalizedPhone) {
+      toast('Please fill all required lead fields', 'error')
+      return false
+    }
+    if (!RE_EMAIL.test(trimmedEmail)) {
+      toast('Please enter a valid lead email', 'error')
+      return false
+    }
+    if (normalizedPhone.length !== 10 || !/^[6-9]\d{9}$/.test(normalizedPhone)) {
+      toast('Please enter a valid lead phone number', 'error')
+      return false
+    }
  
     const newLead = {
       ...lead,
+      name: trimmedName,
+      company: trimmedCompany,
+      email: trimmedEmail,
+      phone: normalizedPhone,
       id: Date.now(),
       createdAt: new Date().toLocaleDateString('en-IN', {
         month: 'short',
@@ -172,6 +197,8 @@ export function AppProvider({ children }) {
       `${lead.name || "A lead"} has been created`,
       "info"
     )
+
+    return true
  
   }, [toast, addNotification])
  
@@ -200,8 +227,12 @@ export function AppProvider({ children }) {
   // Tasks CRUD
   // ─────────────────────────────
   const addTask = useCallback((task) => {
+    if (!isValidTask(task)) {
+      toast('Please fill all required task fields', 'error')
+      return false
+    }
  
-    const newTask = { ...task, id: Date.now() }
+    const newTask = { ...task, title: String(task.title).trim(), agent: String(task.agent).trim(), due: String(task.due).trim(), id: Date.now() }
  
     setTasks(t => [newTask, ...t])
  
@@ -212,6 +243,8 @@ export function AppProvider({ children }) {
       `${task.title || "Task"} has been assigned`,
       "warning"
     )
+
+    return true
  
   }, [toast, addNotification])
  

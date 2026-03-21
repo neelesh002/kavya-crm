@@ -110,6 +110,9 @@ export default function ProjectsPage() {
   const [teamOpen,    setTeamOpen]    = useState(false)
   const [teamProject, setTeamProject] = useState(null)
   const [teamMembers, setTeamMembers] = useState([])
+
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailProject, setDetailProject] = useState(null)
  
   // ── Delete confirm ─────────────────────────────────
   const [deleteOpen,    setDeleteOpen]    = useState(false)
@@ -205,6 +208,11 @@ export default function ProjectsPage() {
     setTeamMembers(currentTeam.map(u => u.id))
     setTeamOpen(true)
   }
+
+  const openDetails = (project) => {
+    setDetailProject(project)
+    setDetailOpen(true)
+  }
  
   // Toggle a member in/out of team
   const toggleMember = (userId) => {
@@ -290,6 +298,11 @@ export default function ProjectsPage() {
   const closeEditModal = () => {
     setEditOpen(false)
     setEditErrors({})
+  }
+
+  const closeDetailModal = () => {
+    setDetailOpen(false)
+    setDetailProject(null)
   }
  
   // ══════════════════════════════════════════
@@ -457,7 +470,7 @@ export default function ProjectsPage() {
                   // Agents can only view — read-only button
 <button
                     className="btn btn-outline btn-sm flex-1"
-                    onClick={() => toast('Contact your manager to edit projects', 'info')}
+                    onClick={() => openDetails(p)}
 >
                     👁️ View Details
 </button>
@@ -547,6 +560,78 @@ export default function ProjectsPage() {
             placeholder="Project description…"
           />
 </FormGroup>
+</Modal>
+
+      <Modal
+        open={detailOpen}
+        onClose={closeDetailModal}
+        title={`Project Details - ${detailProject?.name || ''}`}
+        footer={
+<>
+<button className="btn btn-outline" onClick={closeDetailModal}>Close</button>
+</>
+        }
+>
+        {detailProject && (
+<>
+<div className="grid-2" style={{ marginBottom: 16 }}>
+<div className="card" style={{ padding: 14 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 6 }}>Client</div>
+<div className="fw-700">{detailProject.client || '-'}</div>
+</div>
+<div className="card" style={{ padding: 14 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 6 }}>Status</div>
+<StatusBadge status={detailProject.status} />
+</div>
+</div>
+
+<div className="grid-2" style={{ marginBottom: 16 }}>
+<div className="card" style={{ padding: 14 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 6 }}>Budget</div>
+<div className="fw-700 text-teal">₹{Number(detailProject.budget || 0).toLocaleString('en-IN')}</div>
+</div>
+<div className="card" style={{ padding: 14 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 6 }}>Team Leader</div>
+<div className="fw-700">{detailProject.leader || '-'}</div>
+</div>
+</div>
+
+<div className="card" style={{ padding: 14, marginBottom: 16 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 8 }}>Timeline</div>
+<div className="fw-600">
+              {formatProjectDate(detailProject.start)} - {formatProjectDate(detailProject.end)}
+</div>
+</div>
+
+<div className="card" style={{ padding: 14, marginBottom: 16 }}>
+<div className="flex justify-between items-center mb-2">
+<span className="text-xs text-muted fw-700">Progress</span>
+<span className="font-mono fw-700">{detailProject.progress || 0}%</span>
+</div>
+<ProgressBar value={detailProject.progress || 0} color={STATUS_COLORS[detailProject.status] || 'var(--teal)'} />
+</div>
+
+<div className="card" style={{ padding: 14, marginBottom: 16 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 8 }}>Team Members</div>
+<div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+              {(detailProject.team || []).length ? (
+                detailProject.team.map(member => (
+<div key={member} className="avatar avatar-sm" title={member}>{member}</div>
+                ))
+              ) : (
+<span className="text-sm text-muted">No team members assigned</span>
+              )}
+</div>
+</div>
+
+<div className="card" style={{ padding: 14 }}>
+<div className="text-xs text-muted fw-700" style={{ marginBottom: 8 }}>Description</div>
+<div className="text-sm" style={{ lineHeight: 1.6, color: 'var(--text2)' }}>
+              {detailProject.desc || 'No description added.'}
+</div>
+</div>
+</>
+        )}
 </Modal>
  
       {/* ══════════════════════════════════════════

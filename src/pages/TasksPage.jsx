@@ -1,33 +1,66 @@
-// ════════════════════════════════════════════
-// TASKS PAGE — FULLY RESPONSIVE
-// ════════════════════════════════════════════
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { StatusBadge, StatCard, Modal, FormGroup, ConfirmDialog } from '../components/UI'
 import { USERS_DATA } from '../data/sampleData'
 
-const PRIORITY_COLOR = { LOW: '#8896a8', MEDIUM: '#3b82f6', HIGH: '#E8701A', URGENT: '#ef4444' }
-const TYPE_ICON = { CALL: '📞', EMAIL: '📧', MEETING: '🤝', FOLLOW_UP: '🔄', DEMO: '💻', OTHER: '📌' }
-const STATUS_ICON = { PENDING: '⏳', IN_PROGRESS: '🔄', COMPLETED: '✅', CANCELLED: '❌' }
+const ErrMsg = ({ msg }) => (msg ? <span className="field-error">{msg}</span> : null)
+const inputClass = (err) => (err ? 'form-input input-error' : 'form-input')
+const selectClass = (err) => (err ? 'form-select input-error' : 'form-select')
 
-// ── Task Card (mobile) ─────────────────────────────────────
-function TaskCard({ t, onEdit, onDelete, onComplete }) {
-  const isCompleted = t.status === 'COMPLETED'
+const PRIORITY_COLOR = {
+  LOW: '#8896a8',
+  MEDIUM: '#3b82f6',
+  HIGH: '#E8701A',
+  URGENT: '#ef4444',
+}
+
+const TYPE_ICON = {
+  CALL: 'Call',
+  EMAIL: 'Email',
+  MEETING: 'Meeting',
+  FOLLOW_UP: 'Follow Up',
+  DEMO: 'Demo',
+  OTHER: 'Other',
+}
+
+const EMPTY_TASK = {
+  title: '',
+  lead: '',
+  agent: 'Ananya Rao',
+  due: '',
+  priority: 'HIGH',
+  status: 'PENDING',
+  type: 'CALL',
+  desc: '',
+}
+
+const validateTaskForm = (form) => {
+  const errors = {}
+  if (!String(form.title || '').trim()) errors.title = 'Task title is required'
+  if (!String(form.agent || '').trim()) errors.agent = 'Assignee is required'
+  if (!String(form.due || '').trim()) errors.due = 'Due date is required'
+  return errors
+}
+
+function TaskCard({ task, onEdit, onDelete, onToggleComplete }) {
+  const isCompleted = task.status === 'COMPLETED'
+
   return (
-    <div style={{
-      background: 'var(--bg1)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--r-md)',
-      padding: '14px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-      opacity: isCompleted ? 0.7 : 1,
-    }}>
-      {/* Title + priority dot */}
+    <div
+      style={{
+        background: 'var(--bg1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r-md)',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        opacity: isCompleted ? 0.7 : 1,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>
-          {TYPE_ICON[t.type] || '📌'}
+        <span style={{ fontSize: 12, lineHeight: 1.4, flexShrink: 0, marginTop: 1 }}>
+          {TYPE_ICON[task.type] || 'Task'}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -39,51 +72,60 @@ function TaskCard({ t, onEdit, onDelete, onComplete }) {
               wordBreak: 'break-word',
             }}
           >
-            {t.title}
+            {task.title}
           </div>
-          {t.lead && (
+          {task.lead && (
             <div className="text-teal fw-600" style={{ fontSize: 12, marginTop: 2 }}>
-              🔗 {t.lead}
+              Lead: {task.lead}
             </div>
           )}
         </div>
-        {/* Priority badge */}
-        <span style={{
-          fontSize: 10, fontWeight: 800, letterSpacing: 0.5,
-          padding: '3px 8px', borderRadius: 99, flexShrink: 0,
-          background: PRIORITY_COLOR[t.priority] + '22',
-          color: PRIORITY_COLOR[t.priority],
-        }}>
-          {t.priority}
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: 0.5,
+            padding: '3px 8px',
+            borderRadius: 99,
+            flexShrink: 0,
+            background: `${PRIORITY_COLOR[task.priority]}22`,
+            color: PRIORITY_COLOR[task.priority],
+          }}
+        >
+          {task.priority}
         </span>
       </div>
 
-      {/* Meta row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', fontSize: 12 }}>
         <span style={{ color: 'var(--text2)' }}>
           <span style={{ color: 'var(--text3)' }}>Agent: </span>
-          <strong>{t.agent?.split(' ')[0]}</strong>
+          <strong>{task.agent?.split(' ')[0]}</strong>
         </span>
         <span style={{ color: 'var(--text2)' }}>
           <span style={{ color: 'var(--text3)' }}>Due: </span>
-          <strong className="font-mono">{t.due || '—'}</strong>
+          <strong className="font-mono">{task.due || '-'}</strong>
         </span>
-        <span className="badge badge-blue" style={{ fontSize: 11 }}>{t.type}</span>
+        <span className="badge badge-blue" style={{ fontSize: 11 }}>
+          {task.type}
+        </span>
       </div>
 
-      {/* Status + actions */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <StatusBadge status={t.status} />
+        <StatusBadge status={task.status} />
         <div style={{ display: 'flex', gap: 6 }}>
-          {!isCompleted && (
-            <button
-              className="btn btn-success btn-icon btn-sm"
-              title="Mark Complete"
-              onClick={() => onComplete(t.id)}
-            >✓</button>
-          )}
-          <button className="btn btn-outline btn-icon btn-sm" onClick={() => onEdit(t)}>✏️</button>
-          <button className="btn btn-danger btn-icon btn-sm" onClick={() => onDelete(t.id)}>🗑</button>
+          <button
+            className={`btn btn-icon btn-sm ${isCompleted ? 'btn-outline' : 'btn-success'}`}
+            title={isCompleted ? 'Reopen Task' : 'Mark Complete'}
+            onClick={() => onToggleComplete(task)}
+          >
+            {isCompleted ? 'Reopen' : 'Done'}
+          </button>
+          <button className="btn btn-outline btn-icon btn-sm" onClick={() => onEdit(task)}>
+            Edit
+          </button>
+          <button className="btn btn-danger btn-icon btn-sm" onClick={() => onDelete(task.id)}>
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -91,44 +133,98 @@ function TaskCard({ t, onEdit, onDelete, onComplete }) {
 }
 
 export function TasksPage() {
-  const { tasks, addTask, updateTask, deleteTask, leads, toast } = useApp()
-  const [modalOpen, setModal]   = useState(false)
+  const { tasks, addTask, updateTask, deleteTask, toast } = useApp()
+  const [modalOpen, setModalOpen] = useState(false)
   const [editTask, setEditTask] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
-  const [filterStatus, setFSt]  = useState('')
-  const [filterAgent, setFAg]   = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterAgent, setFilterAgent] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [form, setForm] = useState(EMPTY_TASK)
 
-  const agents  = USERS_DATA.filter(u => u.role !== 'ADMIN')
-  const filtered = tasks.filter(t => {
-    if (filterStatus && t.status !== filterStatus) return false
-    if (filterAgent  && t.agent  !== filterAgent)  return false
+  const agents = USERS_DATA.filter((u) => u.role !== 'ADMIN')
+  const filtered = tasks.filter((task) => {
+    if (filterStatus && task.status !== filterStatus) return false
+    if (filterAgent && task.agent !== filterAgent) return false
     return true
   })
 
   const stats = [
-    { icon:'⏳', value: tasks.filter(t=>t.status==='PENDING').length,     label:'Pending',     color:'var(--orange)', bg:'var(--orange-dim)' },
-    { icon:'🔄', value: tasks.filter(t=>t.status==='IN_PROGRESS').length, label:'In Progress', color:'#3b82f6',       bg:'var(--blue-dim)' },
-    { icon:'✅', value: tasks.filter(t=>t.status==='COMPLETED').length,   label:'Completed',   color:'var(--green)',  bg:'var(--green-dim)' },
-    { icon:'❌', value: tasks.filter(t=>t.status==='CANCELLED').length,   label:'Cancelled',   color:'var(--red)',    bg:'var(--red-dim)' },
+    { icon: 'P', value: tasks.filter((t) => t.status === 'PENDING').length, label: 'Pending', color: 'var(--orange)', bg: 'var(--orange-dim)' },
+    { icon: 'IP', value: tasks.filter((t) => t.status === 'IN_PROGRESS').length, label: 'In Progress', color: '#3b82f6', bg: 'var(--blue-dim)' },
+    { icon: 'C', value: tasks.filter((t) => t.status === 'COMPLETED').length, label: 'Completed', color: 'var(--green)', bg: 'var(--green-dim)' },
+    { icon: 'X', value: tasks.filter((t) => t.status === 'CANCELLED').length, label: 'Cancelled', color: 'var(--red)', bg: 'var(--red-dim)' },
   ]
 
-  const [form, setForm] = useState({ title:'', lead:'', agent:'Ananya Rao', due:'', priority:'HIGH', status:'PENDING', type:'CALL', desc:'' })
-  const setF = (k,v) => setForm(f => ({ ...f, [k]:v }))
-
-  const openNew  = () => {
-    setEditTask(null)
-    setForm({ title:'', lead:'', agent:'Ananya Rao', due:'', priority:'HIGH', status:'PENDING', type:'CALL', desc:'' })
-    setModal(true)
+  const setField = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setErrors((current) => {
+      if (!current[key]) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
   }
-  const openEdit = task => { setEditTask(task); setForm(task); setModal(true) }
+
   const getAgentInitials = (agentName) =>
-    agents.find(a => `${a.firstName} ${a.lastName}` === agentName)?.initials || 'SA'
+    agents.find((a) => `${a.firstName} ${a.lastName}` === agentName)?.initials || 'SA'
+
+  const closeModal = () => {
+    setErrors({})
+    setModalOpen(false)
+  }
+
+  const openNew = () => {
+    setEditTask(null)
+    setErrors({})
+    setForm(EMPTY_TASK)
+    setModalOpen(true)
+  }
+
+  const openEdit = (task) => {
+    setEditTask(task)
+    setErrors({})
+    setForm({
+      title: task.title || '',
+      lead: task.lead || '',
+      agent: task.agent || 'Ananya Rao',
+      due: task.due || '',
+      priority: task.priority || 'HIGH',
+      status: task.status || 'PENDING',
+      type: task.type || 'CALL',
+      desc: task.desc || '',
+    })
+    setModalOpen(true)
+  }
+
   const handleSave = () => {
-    const payload = { ...form, initials: getAgentInitials(form.agent) }
-    if (editTask) updateTask(editTask.id, payload)
-    else addTask(payload)
-    setModal(false)
+    const nextErrors = validateTaskForm(form)
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
+      toast('Please fix the errors', 'error')
+      return
+    }
+
+    const payload = {
+      ...form,
+      title: String(form.title || '').trim(),
+      agent: String(form.agent || '').trim(),
+      due: String(form.due || '').trim(),
+      initials: getAgentInitials(form.agent),
+    }
+
+    if (editTask) {
+      updateTask(editTask.id, payload)
+      closeModal()
+      return
+    }
+
+    if (addTask(payload)) closeModal()
+  }
+
+  const toggleTaskCompletion = (task) => {
+    updateTask(task.id, { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' })
   }
 
   const hasActiveFilters = filterStatus || filterAgent
@@ -136,7 +232,6 @@ export function TasksPage() {
   return (
     <>
       <style>{`
-        /* ── Page header ── */
         .tasks-page-header {
           display: flex;
           align-items: flex-start;
@@ -151,17 +246,14 @@ export function TasksPage() {
           gap: 8px;
           flex-wrap: wrap;
         }
-        /* Filters shown inline on desktop */
         .tasks-filter-selects {
           display: flex;
           gap: 8px;
           align-items: center;
         }
-        /* Mobile filter toggle — hidden on desktop */
         .tasks-filter-mobile-btn {
           display: none;
         }
-        /* Mobile filter panel — hidden by default */
         .tasks-filter-panel {
           display: none;
           gap: 8px;
@@ -175,26 +267,21 @@ export function TasksPage() {
         .tasks-filter-panel.open {
           display: flex;
         }
-
-        /* ── Stats grid responsive ── */
         .tasks-stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 14px;
           margin-bottom: 20px;
         }
-
-        /* ── Table ── */
-        .tasks-table-desktop { display: block; }
-        /* ── Mobile card list ── */
+        .tasks-table-desktop {
+          display: block;
+        }
         .tasks-card-list {
           display: none;
           flex-direction: column;
           gap: 12px;
           padding: 12px 16px;
         }
-
-        /* ── Table footer ── */
         .tasks-table-footer {
           padding: 12px 16px;
           font-size: 13px;
@@ -202,15 +289,11 @@ export function TasksPage() {
           font-weight: 600;
           border-top: 1px solid var(--border);
         }
-
-        /* ── Tablet (≤ 900px): 2-col stats ── */
         @media (max-width: 900px) {
           .tasks-stats-grid {
             grid-template-columns: repeat(2, 1fr);
           }
         }
-
-        /* ── Mobile (≤ 768px) ── */
         @media (max-width: 768px) {
           .tasks-page-header {
             flex-direction: column;
@@ -219,7 +302,6 @@ export function TasksPage() {
           .tasks-header-right {
             justify-content: space-between;
           }
-          /* Hide inline filter selects; show toggle btn */
           .tasks-filter-selects {
             display: none;
           }
@@ -227,8 +309,6 @@ export function TasksPage() {
             display: inline-flex;
             position: relative;
           }
-          /* Show mobile filter panel when .open */
-          /* Hide desktop table, show cards */
           .tasks-table-desktop {
             display: none !important;
           }
@@ -236,8 +316,6 @@ export function TasksPage() {
             display: flex !important;
           }
         }
-
-        /* ── Small phones (≤ 480px) ── */
         @media (max-width: 480px) {
           .tasks-stats-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -251,83 +329,107 @@ export function TasksPage() {
       `}</style>
 
       <div className="animate-fadeup">
-
-        {/* ── Page Header ── */}
         <div className="tasks-page-header page-header">
           <div>
             <h1 className="page-title">Task Management</h1>
             <p className="page-subtitle">Manage and track all team tasks</p>
           </div>
           <div className="tasks-header-right page-actions">
-            {/* Desktop: filters inline */}
             <div className="tasks-filter-selects">
-              <select className="form-select" style={{ width: 130 }} value={filterStatus} onChange={e => setFSt(e.target.value)}>
+              <select
+                className="form-select"
+                style={{ width: 130 }}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
                 <option value="">All Status</option>
-                {['PENDING','IN_PROGRESS','COMPLETED','CANCELLED'].map(s => <option key={s}>{s}</option>)}
+                {['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
               </select>
-              <select className="form-select" style={{ width: 130 }} value={filterAgent} onChange={e => setFAg(e.target.value)}>
+              <select
+                className="form-select"
+                style={{ width: 130 }}
+                value={filterAgent}
+                onChange={(e) => setFilterAgent(e.target.value)}
+              >
                 <option value="">All Agents</option>
-                {agents.map(u => <option key={u.id}>{u.firstName} {u.lastName}</option>)}
+                {agents.map((user) => (
+                  <option key={user.id}>{user.firstName} {user.lastName}</option>
+                ))}
               </select>
             </div>
 
-            {/* Mobile: filter toggle */}
             <button
               className="btn btn-outline btn-sm tasks-filter-mobile-btn"
-              onClick={() => setFiltersOpen(o => !o)}
+              onClick={() => setFiltersOpen((open) => !open)}
               style={{ position: 'relative' }}
             >
-              ⚙ Filters
+              Filters
               {hasActiveFilters && (
-                <span style={{
-                  position: 'absolute', top: -5, right: -5,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: 'var(--teal)', border: '2px solid var(--bg1)'
-                }} />
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -5,
+                    right: -5,
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: 'var(--teal)',
+                    border: '2px solid var(--bg1)',
+                  }}
+                />
               )}
             </button>
 
-            <button className="btn btn-primary" onClick={openNew}>+ New Task</button>
+            <button className="btn btn-primary" onClick={openNew}>
+              + New Task
+            </button>
           </div>
         </div>
 
-        {/* ── Mobile filter panel ── */}
         <div className={`tasks-filter-panel ${filtersOpen ? 'open' : ''}`}>
           <select
             className="form-select"
             style={{ flex: 1, minWidth: 120 }}
             value={filterStatus}
-            onChange={e => setFSt(e.target.value)}
+            onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="">All Status</option>
-            {['PENDING','IN_PROGRESS','COMPLETED','CANCELLED'].map(s => <option key={s}>{s}</option>)}
+            {['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((status) => (
+              <option key={status}>{status}</option>
+            ))}
           </select>
           <select
             className="form-select"
             style={{ flex: 1, minWidth: 120 }}
             value={filterAgent}
-            onChange={e => setFAg(e.target.value)}
+            onChange={(e) => setFilterAgent(e.target.value)}
           >
             <option value="">All Agents</option>
-            {agents.map(u => <option key={u.id}>{u.firstName} {u.lastName}</option>)}
+            {agents.map((user) => (
+              <option key={user.id}>{user.firstName} {user.lastName}</option>
+            ))}
           </select>
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => { setFSt(''); setFAg(''); setFiltersOpen(false) }}
+            onClick={() => {
+              setFilterStatus('')
+              setFilterAgent('')
+              setFiltersOpen(false)
+            }}
           >
-            ✕ Clear
+            Clear
           </button>
         </div>
 
-        {/* ── Stats ── */}
         <div className="tasks-stats-grid">
-          {stats.map((s, i) => <StatCard key={i} {...s} />)}
+          {stats.map((stat, index) => (
+            <StatCard key={index} {...stat} />
+          ))}
         </div>
 
-        {/* ── Table / Cards ── */}
         <div className="table-wrapper">
-
-          {/* Desktop table */}
           <div className="tasks-table-desktop overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -343,29 +445,48 @@ export function TasksPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id}>
+                {filtered.map((task) => (
+                  <tr key={task.id}>
                     <td>
-                      <span className="fw-600" style={t.status === 'COMPLETED' ? { textDecoration: 'line-through', opacity: .55 } : {}}>
-                        {TYPE_ICON[t.type]} {t.title}
+                      <span
+                        className="fw-600"
+                        style={task.status === 'COMPLETED' ? { textDecoration: 'line-through', opacity: 0.55 } : {}}
+                      >
+                        {TYPE_ICON[task.type] || task.type} {task.title}
                       </span>
                     </td>
-                    <td className="text-teal fw-600">{t.lead || '—'}</td>
+                    <td className="text-teal fw-600">{task.lead || '-'}</td>
                     <td>
                       <div className="flex items-center gap-2">
-                        <div className="avatar avatar-sm">{t.initials}</div>
-                        <span className="text-sm fw-600">{t.agent}</span>
+                        <div className="avatar avatar-sm">{task.initials}</div>
+                        <span className="text-sm fw-600">{task.agent}</span>
                       </div>
                     </td>
-                    <td className="font-mono text-sm">{t.due}</td>
-                    <td><span className="badge badge-blue">{t.type}</span></td>
-                    <td><StatusBadge status={t.priority} /></td>
-                    <td><StatusBadge status={t.status} /></td>
+                    <td className="font-mono text-sm">{task.due}</td>
+                    <td>
+                      <span className="badge badge-blue">{task.type}</span>
+                    </td>
+                    <td>
+                      <StatusBadge status={task.priority} />
+                    </td>
+                    <td>
+                      <StatusBadge status={task.status} />
+                    </td>
                     <td>
                       <div className="table-actions">
-                        <button className="btn btn-outline btn-icon btn-sm" onClick={() => openEdit(t)}>✏️</button>
-                        <button className="btn btn-success btn-icon btn-sm" title="Mark Complete" onClick={() => updateTask(t.id, { status: 'COMPLETED' })}>✓</button>
-                        <button className="btn btn-danger  btn-icon btn-sm" onClick={() => setDeleteId(t.id)}>🗑</button>
+                        <button className="btn btn-outline btn-icon btn-sm" onClick={() => openEdit(task)}>
+                          Edit
+                        </button>
+                        <button
+                          className={`btn btn-icon btn-sm ${task.status === 'COMPLETED' ? 'btn-outline' : 'btn-success'}`}
+                          title={task.status === 'COMPLETED' ? 'Reopen Task' : 'Mark Complete'}
+                          onClick={() => toggleTaskCompletion(task)}
+                        >
+                          {task.status === 'COMPLETED' ? 'Reopen' : 'Done'}
+                        </button>
+                        <button className="btn btn-danger btn-icon btn-sm" onClick={() => setDeleteId(task.id)}>
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -374,7 +495,9 @@ export function TasksPage() {
                   <tr>
                     <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>
                       No tasks found.{' '}
-                      <span className="text-teal fw-700" style={{ cursor: 'pointer' }} onClick={openNew}>Create one?</span>
+                      <span className="text-teal fw-700" style={{ cursor: 'pointer' }} onClick={openNew}>
+                        Create one?
+                      </span>
                     </td>
                   </tr>
                 )}
@@ -382,22 +505,25 @@ export function TasksPage() {
             </table>
           </div>
 
-          {/* Mobile card list */}
           <div className="tasks-card-list">
             {filtered.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)' }}>
                 No tasks found.{' '}
-                <span className="text-teal fw-700" style={{ cursor: 'pointer' }} onClick={openNew}>Create one?</span>
+                <span className="text-teal fw-700" style={{ cursor: 'pointer' }} onClick={openNew}>
+                  Create one?
+                </span>
               </div>
-            ) : filtered.map(t => (
-              <TaskCard
-                key={t.id}
-                t={t}
-                onEdit={openEdit}
-                onDelete={setDeleteId}
-                onComplete={(id) => updateTask(id, { status: 'COMPLETED' })}
-              />
-            ))}
+            ) : (
+              filtered.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={openEdit}
+                  onDelete={setDeleteId}
+                  onToggleComplete={toggleTaskCompletion}
+                />
+              ))
+            )}
           </div>
 
           <div className="tasks-table-footer">
@@ -405,52 +531,100 @@ export function TasksPage() {
           </div>
         </div>
 
-        {/* ── Modal ── */}
         <Modal
           open={modalOpen}
-          onClose={() => setModal(false)}
-          title={editTask ? '✏️ Edit Task' : '✅ New Task'}
+          onClose={closeModal}
+          title={editTask ? 'Edit Task' : 'New Task'}
           footer={
             <>
-              <button className="btn btn-outline" onClick={() => setModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave}>{editTask ? 'Save' : 'Create Task'}</button>
+              <button className="btn btn-outline" onClick={closeModal}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleSave}>
+                {editTask ? 'Save' : 'Create Task'}
+              </button>
             </>
           }
         >
           <FormGroup label="Task Title" required>
-            <input className="form-input" value={form.title} onChange={e => setF('title', e.target.value)} placeholder="Demo call with client" />
+            <input
+              className={inputClass(errors.title)}
+              value={form.title}
+              onChange={(e) => setField('title', e.target.value)}
+              placeholder="Demo call with client"
+            />
+            <ErrMsg msg={errors.title} />
           </FormGroup>
+
           <div className="grid-2">
-            <FormGroup label="Assign To">
-              <select className="form-select" value={form.agent} onChange={e => setF('agent', e.target.value)}>
-                {agents.map(u => <option key={u.id}>{u.firstName} {u.lastName}</option>)}
+            <FormGroup label="Assign To" required>
+              <select
+                className={selectClass(errors.agent)}
+                value={form.agent}
+                onChange={(e) => setField('agent', e.target.value)}
+              >
+                {agents.map((user) => (
+                  <option key={user.id}>{user.firstName} {user.lastName}</option>
+                ))}
               </select>
+              <ErrMsg msg={errors.agent} />
             </FormGroup>
-            <FormGroup label="Due Date">
-              <input className="form-input" type="date" value={form.due} onChange={e => setF('due', e.target.value)} />
+
+            <FormGroup label="Due Date" required>
+              <input
+                className={inputClass(errors.due)}
+                type="date"
+                value={form.due}
+                onChange={(e) => setField('due', e.target.value)}
+              />
+              <ErrMsg msg={errors.due} />
             </FormGroup>
           </div>
+
           <div className="grid-2">
             <FormGroup label="Priority">
-              <select className="form-select" value={form.priority} onChange={e => setF('priority', e.target.value)}>
-                {['LOW','MEDIUM','HIGH','URGENT'].map(p => <option key={p}>{p}</option>)}
+              <select className="form-select" value={form.priority} onChange={(e) => setField('priority', e.target.value)}>
+                {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((priority) => (
+                  <option key={priority}>{priority}</option>
+                ))}
               </select>
             </FormGroup>
+
             <FormGroup label="Status">
-              <select className="form-select" value={form.status} onChange={e => setF('status', e.target.value)}>
-                {['PENDING','IN_PROGRESS','COMPLETED','CANCELLED'].map(s => <option key={s}>{s}</option>)}
+              <select className="form-select" value={form.status} onChange={(e) => setField('status', e.target.value)}>
+                {['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
               </select>
             </FormGroup>
           </div>
+
           <div className="grid-2">
             <FormGroup label="Task Type">
-              <select className="form-select" value={form.type} onChange={e => setF('type', e.target.value)}>
-                {['CALL','EMAIL','MEETING','FOLLOW_UP','DEMO','OTHER'].map(t => <option key={t}>{t}</option>)}
+              <select className="form-select" value={form.type} onChange={(e) => setField('type', e.target.value)}>
+                {['CALL', 'EMAIL', 'MEETING', 'FOLLOW_UP', 'DEMO', 'OTHER'].map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
               </select>
             </FormGroup>
+
+            <FormGroup label="Lead">
+              <input
+                className="form-input"
+                value={form.lead}
+                onChange={(e) => setField('lead', e.target.value)}
+                placeholder="Optional lead name"
+              />
+            </FormGroup>
           </div>
+
           <FormGroup label="Description">
-            <textarea className="form-textarea" value={form.desc} onChange={e => setF('desc', e.target.value)} placeholder="Task details…" />
+            <textarea
+              className="form-textarea"
+              value={form.desc}
+              onChange={(e) => setField('desc', e.target.value)}
+              placeholder="Task details..."
+            />
           </FormGroup>
         </Modal>
 

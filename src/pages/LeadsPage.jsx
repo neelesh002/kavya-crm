@@ -10,11 +10,40 @@ const STATUSES = ['NEW', 'CONTACTED', 'FOLLOW_UP', 'QUALIFIED', 'CLOSED']
 const SOURCES = ['WEBSITE', 'REFERRAL', 'SOCIAL_MEDIA', 'EMAIL_CAMPAIGN', 'COLD_CALL', 'TRADE_SHOW', 'OTHER']
 const STATUS_DOT = { NEW: '#8896a8', CONTACTED: '#3b82f6', FOLLOW_UP: '#E8701A', QUALIFIED: '#7c3aed', CLOSED: '#1AABB0' }
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const RE_LEAD_NAME = /^[A-Za-z][A-Za-z\s.'-]{1,}$/
+const RE_CITY = /^[A-Za-z][A-Za-z\s.'-]{1,}$/
+const normalizeLeadName = (value) => String(value || '').replace(/[^A-Za-z\s.'-]/g, '').replace(/\s+/g, ' ').trimStart()
+const normalizeCity = (value) => String(value || '').replace(/[^A-Za-z\s.'-]/g, '').replace(/\s+/g, ' ').trimStart()
 const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(0, 10)
+const formatPhoneInput = (value) => {
+  const digits = normalizePhone(value)
+  return digits.length > 5 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits
+}
 const normalizeScore = (value) => Math.min(100, Math.max(0, Number(value) || 0))
 const EMPTY_LEAD_FORM = { name: '', phone: '', email: '', company: '', source: 'WEBSITE', status: 'NEW', agent: 'Ananya Rao', deal: '', city: '', score: 50 }
 const ErrMsg = ({ msg }) => msg ? <span className="field-error">{msg}</span> : null
 const ic = (err) => err ? 'form-input input-error' : 'form-input'
+
+const validateLeadForm = (form) => {
+  const errors = {}
+  const normalizedPhone = normalizePhone(form.phone)
+  const trimmedEmail = String(form.email || '').trim()
+  const trimmedName = String(form.name || '').trim()
+  const trimmedCity = String(form.city || '').trim()
+
+  if (!trimmedName) errors.name = 'Full name is required'
+  else if (!RE_LEAD_NAME.test(trimmedName)) errors.name = 'Enter a valid full name'
+  if (!String(form.company || '').trim()) errors.company = 'Company is required'
+  if (!trimmedEmail) errors.email = 'Email is required'
+  else if (!RE_EMAIL.test(trimmedEmail)) errors.email = 'Enter a valid email address'
+  if (!normalizedPhone) errors.phone = 'Phone number is required'
+  else if (normalizedPhone.length !== 10) errors.phone = 'Phone number must be 10 digits'
+  else if (!/^[6-9]\d{9}$/.test(normalizedPhone)) errors.phone = 'Enter a valid mobile number'
+  if (trimmedCity && !RE_CITY.test(trimmedCity)) errors.city = 'Enter a valid city name'
+  if (form.deal !== '' && Number(form.deal) < 0) errors.deal = 'Deal value cannot be negative'
+
+  return errors
+}
 
 const WA_TEMPLATES = [
   { label: 'Introduction', text: (name) => `Hi ${name}! 👋 I'm reaching out from Kavya Infoweb. We offer CRM & sales automation solutions that can help grow your business. Would you be open to a quick 15-min call this week?` },
@@ -144,18 +173,7 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
   }
   const agents = USERS_DATA.filter(u => u.role !== 'ADMIN')
   const validate = () => {
-    const next = {}
-    const normalizedPhone = normalizePhone(form.phone)
-    const trimmedEmail = form.email.trim()
-
-    if (!form.name.trim()) next.name = 'Full name is required'
-    if (!form.company.trim()) next.company = 'Company is required'
-    if (!trimmedEmail) next.email = 'Email is required'
-    else if (!RE_EMAIL.test(trimmedEmail)) next.email = 'Enter a valid email address'
-    if (!normalizedPhone) next.phone = 'Phone number is required'
-    else if (normalizedPhone.length !== 10) next.phone = 'Phone number must be 10 digits'
-    if (form.deal !== '' && Number(form.deal) < 0) next.deal = 'Deal value cannot be negative'
-
+    const next = validateLeadForm(form)
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -187,12 +205,12 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
     <Modal open={open} onClose={onClose} title={lead ? '✏️ Edit Lead' : '➕ New Lead'} size="lg"
       footer={<><button className="btn btn-outline" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={handleSubmit}>{lead ? 'Save Changes' : 'Create Lead'}</button></>}>
       <div className="grid-2">
-        <FormGroup label="Full Name" required><input className={ic(errors.name)} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Rahul Mehta" required /><ErrMsg msg={errors.name} /></FormGroup>
+        <FormGroup label="Full Name" required><input className={ic(errors.name)} value={form.name} onChange={e => set('name', normalizeLeadName(e.target.value))} placeholder="Rahul Mehta" required /><ErrMsg msg={errors.name} /></FormGroup>
         <FormGroup label="Company" required><input className={ic(errors.company)} value={form.company} onChange={e => set('company', e.target.value)} placeholder="TechSoft Pvt Ltd" /><ErrMsg msg={errors.company} /></FormGroup>
       </div>
       <div className="grid-2">
         <FormGroup label="Email" required><input className={ic(errors.email)} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="rahul@example.in" /><ErrMsg msg={errors.email} /></FormGroup>
-        <FormGroup label="Phone" required><input className={ic(errors.phone)} value={form.phone} onChange={e => set('phone', normalizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} /><ErrMsg msg={errors.phone} /></FormGroup>
+        <FormGroup label="Phone" required><input className={ic(errors.phone)} value={formatPhoneInput(form.phone)} onChange={e => set('phone', normalizePhone(e.target.value))} placeholder="98765 43210" inputMode="numeric" maxLength={11} /><ErrMsg msg={errors.phone} /></FormGroup>
       </div>
       <div className="grid-2">
         <FormGroup label="Lead Source"><select className="form-select" value={form.source} onChange={e => set('source', e.target.value)}>{SOURCES.map(s => <option key={s}>{s}</option>)}</select></FormGroup>
@@ -203,7 +221,7 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
         <FormGroup label="Status"><select className="form-select" value={form.status} onChange={e => set('status', e.target.value)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></FormGroup>
       </div>
       <div className="grid-2">
-        <FormGroup label="City"><input className="form-input" value={form.city} onChange={e => set('city', e.target.value)} placeholder="Mumbai" /></FormGroup>
+        <FormGroup label="City"><input className={ic(errors.city)} value={form.city} onChange={e => set('city', normalizeCity(e.target.value))} placeholder="Mumbai" /><ErrMsg msg={errors.city} /></FormGroup>
         <FormGroup label="Lead Score (0–100)"><input className="form-input" type="number" min={0} max={100} value={form.score} onChange={e => set('score', normalizeScore(e.target.value))} /></FormGroup>
       </div>
     </Modal>
@@ -542,6 +560,12 @@ export default function LeadsPage() {
   const openEdit = lead => { setEditLead(lead); setModal(true) }
 
   const handleSave = form => {
+    const errors = validateLeadForm(form)
+    if (Object.keys(errors).length) {
+      toast('Please fix the errors', 'error')
+      return
+    }
+
     const payload = { ...form, phone: normalizePhone(form.phone), score: normalizeScore(form.score) }
     if (editLead) updateLead(editLead.id, payload)
     else {
