@@ -237,7 +237,15 @@ export function ProductsPage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({ name: '', sku: '', category: 'Software', price: '', gst: 18, desc: '', active: true })
   const [errors, setErrors] = useState({})
-  const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+  const normalizeNonNegative = (value) => {
+    if (value === '' || value === null || value === undefined) return ''
+    return String(Math.max(0, Number(value) || 0))
+  }
+  const setF = (k, v) => {
+    const nextValue = k === 'price' || k === 'gst' ? normalizeNonNegative(v) : v
+    setForm(f => ({ ...f, [k]: nextValue }))
+    setErrors(e => ({ ...e, [k]: '' }))
+  }
 
   const validate = () => {
     const e = {}
@@ -266,8 +274,8 @@ export function ProductsPage() {
 
   const handleSave = () => {
     if (!validate()) { toast('Please fix the errors', 'error'); return }
-    const parsedPrice = parseInt(form.price) || 0
-    const parsedGst = form.gst !== '' && form.gst !== null ? Number(form.gst) : 18
+    const parsedPrice = Math.max(0, parseInt(form.price) || 0)
+    const parsedGst = form.gst !== '' && form.gst !== null ? Math.max(0, Number(form.gst)) : 18
     if (editId) {
       setProducts(p => p.map(x => x.id === editId ? { ...x, ...form, price: parsedPrice, gst: parsedGst } : x))
       toast('Product updated!')
@@ -360,7 +368,7 @@ export function ProductsPage() {
             <FormGroup label="Category" required><input className={ic(errors.category)} value={form.category} onChange={e => setF('category', e.target.value)} placeholder="Software" /><ErrMsg msg={errors.category} /></FormGroup>
             <FormGroup label="Price (₹)" required><input className={ic(errors.price)} type="number" value={form.price} onChange={e => setF('price', e.target.value)} placeholder="0" /><ErrMsg msg={errors.price} /></FormGroup>
           </div>
-          <FormGroup label="GST %"><input className={ic(errors.gst)} type="number" value={form.gst} onChange={e => setF('gst', e.target.value)} placeholder="18" /><ErrMsg msg={errors.gst} /></FormGroup>
+          <FormGroup label="GST %"><input className={ic(errors.gst)} type="number" min="0" value={form.gst} onChange={e => setF('gst', e.target.value)} placeholder="18" /><ErrMsg msg={errors.gst} /></FormGroup>
           <FormGroup label="Description"><textarea className="form-textarea" value={form.desc} onChange={e => setF('desc', e.target.value)} placeholder="Product description…" /></FormGroup>
         </Modal>
       </div>
@@ -537,8 +545,6 @@ export function InvoicesPage() {
           <span>{invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
-
-      {/* MODAL (UNCHANGED — YOUR EDIT WINDOW IS STILL HERE) */}
 
       <Modal
         open={modalOpen}

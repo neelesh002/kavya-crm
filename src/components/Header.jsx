@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import { LEADS_DATA, TASKS_DATA, PROJECTS_DATA } from '../data/sampleData'
+import { PROJECTS_DATA } from '../data/sampleData'
  
 export default function Header({ onToggle }) {
   const navigate = useNavigate()
-  const { unreadCount, notifications, markNotifRead, markAllRead } = useApp()
+  const { unreadCount, notifications, markNotifRead, markAllRead, leads, tasks } = useApp()
   const { user } = useAuth()
  
   const [showNotifs,  setShowNotifs]  = useState(false)
@@ -20,6 +20,27 @@ export default function Header({ onToggle }) {
   const isManager = user?.role === 'MANAGER' || isAdmin
   const notifIcons = { success: '✅', warning: '⚠️', info: 'ℹ️', error: '❌' }
  
+  const formatNotificationTime = (notification) => {
+    if (!notification?.createdAt) return notification?.time || ''
+    const created = new Date(notification.createdAt)
+    if (Number.isNaN(created.getTime())) return notification?.time || ''
+
+    const diffMs = Date.now() - created.getTime()
+    const diffMin = Math.max(0, Math.floor(diffMs / 60000))
+
+    if (diffMin < 1) return 'Just now'
+    if (diffMin < 60) return `${diffMin} min${diffMin === 1 ? '' : 's'} ago`
+
+    const diffHr = Math.floor(diffMin / 60)
+    if (diffHr < 24) return `${diffHr} hr${diffHr === 1 ? '' : 's'} ago`
+
+    const diffDay = Math.floor(diffHr / 24)
+    if (diffDay === 1) return 'Yesterday'
+    if (diffDay < 7) return `${diffDay} days ago`
+
+    return created.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
   const avatarBg = isAdmin
     ? 'linear-gradient(135deg,#e53e3e,#c53030)'
     : isManager
@@ -30,7 +51,7 @@ export default function Header({ onToggle }) {
   const q = searchVal.trim().toLowerCase()
  
   const results = q.length < 2 ? [] : [
-    ...LEADS_DATA
+    ...leads
       .filter(l =>
         l.name.toLowerCase().includes(q) ||
         l.company.toLowerCase().includes(q) ||
@@ -46,7 +67,7 @@ export default function Header({ onToggle }) {
         badge: l.status, path: '/leads',
       })),
  
-    ...TASKS_DATA
+    ...tasks
       .filter(t =>
         t.title.toLowerCase().includes(q) ||
         (t.lead || '').toLowerCase().includes(q) ||
@@ -330,7 +351,7 @@ export default function Header({ onToggle }) {
                     <div style={{ flex:1 }}>
                       <div style={{ fontWeight:700, fontSize:13 }}>{n.title}</div>
                       <div style={{ fontSize:12.5, color:'var(--text2)', marginTop:2 }}>{n.message}</div>
-                      <div style={{ fontSize:11, color:'var(--text3)', marginTop:4, fontFamily:'var(--font-mono)' }}>{n.time}</div>
+                      <div style={{ fontSize:11, color:'var(--text3)', marginTop:4, fontFamily:'var(--font-mono)' }}>{formatNotificationTime(n)}</div>
                     </div>
                     {!n.read && <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--teal)', flexShrink:0, marginTop:4 }} />}
                   </div>

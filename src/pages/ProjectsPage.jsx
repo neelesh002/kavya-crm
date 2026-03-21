@@ -10,8 +10,38 @@ const STATUS_COLORS = {
   COMPLETED:   'var(--green)',
   ON_HOLD:     'var(--orange)',
 }
- 
+
 const ALL_AGENTS = USERS_DATA.filter(u => u.role !== 'ADMIN')
+const parseProjectDate = (value) => {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+const toDateInputValue = (value) => {
+  if (!value) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  const parsed = parseProjectDate(value)
+  if (!parsed) return ''
+  const year = parsed.getFullYear()
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+const formatProjectDate = (value) => {
+  if (!value) return '—'
+  const parsed = parseProjectDate(value)
+  if (!parsed) return value
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const hasInvalidDateRange = (start, end) => {
+  const startValue = toDateInputValue(start)
+  const endValue = toDateInputValue(end)
+  return Boolean(startValue && endValue && endValue < startValue)
+}
  
 export default function ProjectsPage() {
   const { toast }             = useApp()
@@ -50,6 +80,10 @@ export default function ProjectsPage() {
   // Create new project
   const handleCreate = e => {
     e.preventDefault()
+    if (hasInvalidDateRange(newForm.start, newForm.end)) {
+      toast('End date cannot be earlier than start date', 'warn')
+      return
+    }
     const initials = newForm.leader.split(' ').map(w => w[0]).join('')
     const project = {
       ...newForm,
@@ -72,8 +106,8 @@ export default function ProjectsPage() {
       name:     project.name,
       client:   project.client,
       budget:   project.budget,
-      start:    project.start,
-      end:      project.end,
+      start:    toDateInputValue(project.start),
+      end:      toDateInputValue(project.end),
       status:   project.status,
       leader:   project.leader,
       desc:     project.desc || '',
@@ -85,6 +119,10 @@ export default function ProjectsPage() {
   // Save edited project
   const handleEditSave = e => {
     e.preventDefault()
+    if (hasInvalidDateRange(editForm.start, editForm.end)) {
+      toast('End date cannot be earlier than start date', 'warn')
+      return
+    }
     const initials = editForm.leader.split(' ').map(w => w[0]).join('')
     setProjects(prev => prev.map(p =>
       p.id === editProject.id
@@ -203,7 +241,7 @@ export default function ProjectsPage() {
 <div className="project-meta-chip">
 <div className="meta-label">Timeline</div>
 <div className="meta-value">
-                    {p.start?.split(',')[0]} – {p.end?.split(',')[0]}
+                    {formatProjectDate(p.start)} – {formatProjectDate(p.end)}
 </div>
 </div>
 </div>
@@ -311,7 +349,7 @@ export default function ProjectsPage() {
 <input className="form-input" type="date" value={newForm.start} onChange={e => setN('start', e.target.value)} />
 </FormGroup>
 <FormGroup label="End Date">
-<input className="form-input" type="date" value={newForm.end} onChange={e => setN('end', e.target.value)} />
+<input className="form-input" type="date" min={newForm.start || undefined} value={newForm.end} onChange={e => setN('end', e.target.value)} />
 </FormGroup>
 </div>
 <div className="grid-2">
@@ -375,7 +413,7 @@ export default function ProjectsPage() {
 <input className="form-input" type="date" value={editForm.start || ''} onChange={e => setE('start', e.target.value)} />
 </FormGroup>
 <FormGroup label="End Date">
-<input className="form-input" type="date" value={editForm.end || ''} onChange={e => setE('end', e.target.value)} />
+<input className="form-input" type="date" min={editForm.start || undefined} value={editForm.end || ''} onChange={e => setE('end', e.target.value)} />
 </FormGroup>
 </div>
 <div className="grid-2">

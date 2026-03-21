@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { AGENT_PERFORMANCE, ACTIVITY_FEED } from '../data/sampleData'
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
+
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, BarElement, ArcElement, RadialLinearScale,
@@ -169,6 +170,23 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { leads, tasks } = useApp()
   const [filter, setFilter] = useState('Today')
+  
+  const [greeting, setGreeting] = useState('')
+
+useEffect(() => {
+  const updateGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) setGreeting('Good morning')
+    else if (hour < 17) setGreeting('Good afternoon')
+    else if (hour < 21) setGreeting('Good evening')
+    else setGreeting('Good night')
+  }
+
+  updateGreeting()
+  const interval = setInterval(updateGreeting, 60000) // update every minute
+
+  return () => clearInterval(interval)
+}, [])
 
   // ── Filtered leads ──
   const filteredLeads = leads.filter(lead => {
@@ -256,6 +274,7 @@ export default function DashboardPage() {
       borderWidth: 0, hoverOffset: 5,
     }]
   }
+ 
 
   return (
     <>
@@ -380,7 +399,7 @@ export default function DashboardPage() {
         <div className="page-header dash-header">
           <div>
             <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Good morning, Admin 👋 — Here's your sales overview for today</p>
+            <p className="page-subtitle">{greeting}, Admin 👋 — Here's your sales overview for today</p>
           </div>
           <div className="dash-header-actions page-actions">
             <select className="form-select" style={{ width: 140 }} value={filter} onChange={e => setFilter(e.target.value)}>

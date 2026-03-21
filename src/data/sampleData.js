@@ -80,11 +80,13 @@ export const MESSAGES_DATA = [
   { id:3, leadId:2, leadName:'Priya Sharma',type:'SMS',      direction:'OUTBOUND', date:'Mar 4, 2025 03:00 PM', content:'Hi Priya, your demo is scheduled for tomorrow at 2 PM. Looking forward to it!', status:'SENT' },
 ];
 
+const notificationTime = (minutesAgo) => new Date(Date.now() - minutesAgo * 60 * 1000).toISOString()
+
 export const NOTIFICATIONS_DATA = [
-  { id:1, title:'New lead assigned', message:'Lakshmi Iyer has been assigned to you.', type:'info',    read:false, time:'10 min ago' },
-  { id:2, title:'Task due today',    message:'Demo call with ABC Corp is due today.',  type:'warning', read:false, time:'1 hr ago' },
-  { id:3, title:'Target milestone!', message:'You have reached 80% of your monthly target!', type:'success', read:false, time:'3 hrs ago' },
-  { id:4, title:'Invoice paid',      message:'INV-2025-001 has been marked as paid.',  type:'success', read:true,  time:'Yesterday' },
+  { id:1, title:'New lead assigned', message:'Lakshmi Iyer has been assigned to you.', type:'info',    read:false, createdAt: notificationTime(10) },
+  { id:2, title:'Task due today',    message:'Demo call with ABC Corp is due today.',  type:'warning', read:false, createdAt: notificationTime(60) },
+  { id:3, title:'Target milestone!', message:'You have reached 80% of your monthly target!', type:'success', read:false, createdAt: notificationTime(180) },
+  { id:4, title:'Invoice paid',      message:'INV-2025-001 has been marked as paid.',  type:'success', read:true,  createdAt: notificationTime(24 * 60) },
 ];
 
 export const ACTIVITY_FEED = [

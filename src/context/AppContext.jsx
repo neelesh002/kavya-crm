@@ -49,6 +49,21 @@ export function AppProvider({ children }) {
   const [currentUser] = useState(USERS_DATA[0])
   const [toasts, setToasts] = useState([])
   const [selectedLead, setSelectedLead] = useState(null)
+
+  useEffect(() => {
+    setNotifications(prev => {
+      let changed = false
+      const next = prev.map((notification, index) => {
+        if (notification.createdAt) return notification
+        changed = true
+        return {
+          ...notification,
+          createdAt: new Date(Date.now() - index * 60 * 60 * 1000).toISOString()
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [setNotifications])
  
  
   // ─────────────────────────────
@@ -83,7 +98,7 @@ export function AppProvider({ children }) {
       message,
       type,
       read: false,
-      time: "Just now"
+      createdAt: new Date().toISOString()
     }
  
     setNotifications(n => [newNotification, ...n])

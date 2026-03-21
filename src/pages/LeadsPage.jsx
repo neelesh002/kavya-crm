@@ -9,6 +9,8 @@ import { USERS_DATA } from '../data/sampleData'
 const STATUSES = ['NEW', 'CONTACTED', 'FOLLOW_UP', 'QUALIFIED', 'CLOSED']
 const SOURCES = ['WEBSITE', 'REFERRAL', 'SOCIAL_MEDIA', 'EMAIL_CAMPAIGN', 'COLD_CALL', 'TRADE_SHOW', 'OTHER']
 const STATUS_DOT = { NEW: '#8896a8', CONTACTED: '#3b82f6', FOLLOW_UP: '#E8701A', QUALIFIED: '#7c3aed', CLOSED: '#1AABB0' }
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(0, 10)
+const normalizeScore = (value) => Math.min(100, Math.max(0, Number(value) || 0))
 
 const WA_TEMPLATES = [
   { label: 'Introduction', text: (name) => `Hi ${name}! 👋 I'm reaching out from Kavya Infoweb. We offer CRM & sales automation solutions that can help grow your business. Would you be open to a quick 15-min call this week?` },
@@ -111,13 +113,13 @@ const importLeads = (event, addLead, toast) => {
         : "NA"
       addLead({
         name: row.Name || "",
-        phone: row.Phone || "",
+        phone: normalizePhone(row.Phone),
         email: row.Email || "",
         company: row.Company || "",
         source: row.Source || "WEBSITE",
         status: row.Status || "NEW",
         agent: row.Agent || "Ananya Rao",
-        score: Number(row.Score) || 50,
+        score: normalizeScore(row.Score || 50),
         deal: Number(row.Deal) || 0,
         initials
       })
@@ -132,7 +134,7 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
   const [form, setForm] = useState(lead || { name: '', phone: '', email: '', company: '', source: 'WEBSITE', status: 'NEW', agent: 'Ananya Rao', deal: '', city: '', score: 50 })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const agents = USERS_DATA.filter(u => u.role !== 'ADMIN')
-  const handleSubmit = e => { e.preventDefault(); onSave(form); onClose() }
+  const handleSubmit = e => { e.preventDefault(); onSave({ ...form, phone: normalizePhone(form.phone) }); onClose() }
 
   return (
     <Modal open={open} onClose={onClose} title={lead ? '✏️ Edit Lead' : '➕ New Lead'} size="lg"
@@ -143,7 +145,7 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
       </div>
       <div className="grid-2">
         <FormGroup label="Email"><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="rahul@example.in" /></FormGroup>
-        <FormGroup label="Phone"><input className="form-input" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+91 98765 43210" /></FormGroup>
+        <FormGroup label="Phone"><input className="form-input" value={form.phone} onChange={e => set('phone', normalizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} /></FormGroup>
       </div>
       <div className="grid-2">
         <FormGroup label="Lead Source"><select className="form-select" value={form.source} onChange={e => set('source', e.target.value)}>{SOURCES.map(s => <option key={s}>{s}</option>)}</select></FormGroup>
@@ -155,7 +157,7 @@ function LeadFormModal({ open, onClose, lead, onSave }) {
       </div>
       <div className="grid-2">
         <FormGroup label="City"><input className="form-input" value={form.city} onChange={e => set('city', e.target.value)} placeholder="Mumbai" /></FormGroup>
-        <FormGroup label="Lead Score (0–100)"><input className="form-input" type="number" min={0} max={100} value={form.score} onChange={e => set('score', parseInt(e.target.value) || 0)} /></FormGroup>
+        <FormGroup label="Lead Score (0–100)"><input className="form-input" type="number" min={0} max={100} value={form.score} onChange={e => set('score', normalizeScore(e.target.value))} /></FormGroup>
       </div>
     </Modal>
   )
@@ -185,7 +187,7 @@ function CallModal({ open, onClose, lead, onSave, toast }) {
     setCalling(false)
     const mins = Math.floor(timer / 60)
     const secs = timer % 60
-    set('duration', `${mins}m ${secs}s`)
+    set('duration', `${mins}m ${secs}s`)      
   }
 
   const formatTimer = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -493,10 +495,11 @@ export default function LeadsPage() {
   const openEdit = lead => { setEditLead(lead); setModal(true) }
 
   const handleSave = form => {
-    if (editLead) updateLead(editLead.id, form)
+    const payload = { ...form, phone: normalizePhone(form.phone), score: normalizeScore(form.score) }
+    if (editLead) updateLead(editLead.id, payload)
     else {
       const initials = form.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-      addLead({ ...form, initials, deal: Number(form.deal) || 0 })
+      addLead({ ...payload, initials, deal: Number(form.deal) || 0 })
     }
   }
 

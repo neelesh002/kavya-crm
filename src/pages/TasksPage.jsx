@@ -122,9 +122,12 @@ export function TasksPage() {
     setModal(true)
   }
   const openEdit = task => { setEditTask(task); setForm(task); setModal(true) }
+  const getAgentInitials = (agentName) =>
+    agents.find(a => `${a.firstName} ${a.lastName}` === agentName)?.initials || 'SA'
   const handleSave = () => {
-    if (editTask) updateTask(editTask.id, form)
-    else addTask({ ...form, initials: agents.find(a=>`${a.firstName} ${a.lastName}`===form.agent)?.initials || 'SA' })
+    const payload = { ...form, initials: getAgentInitials(form.agent) }
+    if (editTask) updateTask(editTask.id, payload)
+    else addTask(payload)
     setModal(false)
   }
 
@@ -433,6 +436,13 @@ export function TasksPage() {
                 {['LOW','MEDIUM','HIGH','URGENT'].map(p => <option key={p}>{p}</option>)}
               </select>
             </FormGroup>
+            <FormGroup label="Status">
+              <select className="form-select" value={form.status} onChange={e => setF('status', e.target.value)}>
+                {['PENDING','IN_PROGRESS','COMPLETED','CANCELLED'].map(s => <option key={s}>{s}</option>)}
+              </select>
+            </FormGroup>
+          </div>
+          <div className="grid-2">
             <FormGroup label="Task Type">
               <select className="form-select" value={form.type} onChange={e => setF('type', e.target.value)}>
                 {['CALL','EMAIL','MEETING','FOLLOW_UP','DEMO','OTHER'].map(t => <option key={t}>{t}</option>)}
