@@ -44,12 +44,21 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("crm_user");
   };
 
+  const updateUserProfile = (updates) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const nextUser = { ...prev, ...updates };
+      localStorage.setItem("crm_user", JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   const isAdmin   = user?.role === "ADMIN";
   const isManager = user?.role === "MANAGER" || isAdmin;
   const isAgent   = user?.role === "SALES_AGENT";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isManager, isAgent }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUserProfile, isAdmin, isManager, isAgent }}>
       {children}
     </AuthContext.Provider>
   );

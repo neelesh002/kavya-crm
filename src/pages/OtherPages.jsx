@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { StatCard, StatusBadge, Modal, FormGroup, ProgressBar, Card, CardHeader, ToggleSwitch } from '../components/UI'
-import { TARGETS_DATA, PRODUCTS_DATA, INVOICES_DATA, USERS_DATA } from '../data/sampleData'
+import { TARGETS_DATA, PRODUCTS_DATA, USERS_DATA } from '../data/sampleData'
 import { Bar, Radar, Line } from 'react-chartjs-2'
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
@@ -380,8 +380,7 @@ export function ProductsPage() {
 // INVOICES PAGE
 // ════════════════════════════════
 export function InvoicesPage() {
-  const { invoices: initialInvoices, toast } = useApp()
-  const [invoices, setInvoices] = useState(initialInvoices)
+  const { invoices, setInvoices, toast } = useApp()
   const [modalOpen, setModal] = useState(false)
   const [editId, setEditId] = useState(null)
   const [errors, setErrors] = useState({})
@@ -731,8 +730,8 @@ export function UsersPage() {
 // PROFILE PAGE — with working photo upload
 // ════════════════════════════════
 export function ProfilePage() {
-  const { toast } = useApp()
-  const { user } = useAuth()
+  const { users, setUsers, toast } = useApp()
+  const { user, updateUserProfile } = useAuth()
 
   const initials = user?.initials || 'SA'
   const name = user?.name || 'System Admin'
@@ -836,6 +835,36 @@ export function ProfilePage() {
       return
     }
 
+    const firstName = pForm.firstName.trim()
+    const lastName = pForm.lastName.trim()
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+    const initials = ((firstName[0] || '') + (lastName[0] || '')).toUpperCase() || user?.initials || 'SA'
+    const email = pForm.email.trim()
+    const profileUpdates = {
+      firstName,
+      lastName,
+      name: fullName || firstName,
+      email,
+      phone: pForm.phone.trim(),
+      dept: pForm.dept.trim(),
+      designation: pForm.designation.trim(),
+      initials,
+    }
+
+    setUsers(prev => prev.map(u => {
+      const matchesCurrent = user?.id ? u.id === user.id : u.email === user?.email
+      return matchesCurrent ? { ...u, ...profileUpdates } : u
+    }))
+    updateUserProfile(profileUpdates)
+    setPForm({
+      firstName,
+      lastName,
+      email,
+      phone: profileUpdates.phone,
+      dept: profileUpdates.dept,
+      designation: profileUpdates.designation,
+    })
+    setPErrors({})
     toast('Profile updated!')
   }
 
@@ -1110,9 +1139,9 @@ export function ProfilePage() {
 // SETTINGS PAGE
 // ════════════════════════════════
 export function SettingsPage() {
-  const { toast } = useApp()
-  const [settings, setSettings] = useState({ darkMode: false, compact: false, animations: true, emailNotif: true, taskReminders: true, smsAlerts: false })
-  const setSetting = (k, v) => setSettings(s => ({ ...s, [k]: v }))
+  const { toast, appSettings, setAppSettings } = useApp()
+  const settings = appSettings
+  const setSetting = (k, v) => setAppSettings(s => ({ ...s, [k]: v }))
 
   const [twilio, setTwilio] = useState({ sid: '', token: '', phone: '', whatsapp: '' })
   const [twilioErr, setTwilioErr] = useState({})

@@ -2,11 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import { PROJECTS_DATA } from '../data/sampleData'
  
 export default function Header({ onToggle }) {
   const navigate = useNavigate()
-  const { unreadCount, notifications, markNotifRead, markAllRead, leads, tasks } = useApp()
+  const { unreadCount, notifications, markNotifRead, markAllRead, leads, tasks, projects } = useApp()
   const { user } = useAuth()
  
   const [showNotifs,  setShowNotifs]  = useState(false)
@@ -82,7 +81,7 @@ export default function Header({ onToggle }) {
         badge: t.status, path: '/tasks',
       })),
  
-    ...PROJECTS_DATA
+    ...projects
       .filter(p =>
         p.name.toLowerCase().includes(q) ||
         (p.client || '').toLowerCase().includes(q)

@@ -73,6 +73,28 @@
   --trans-lg:  all .3s cubic-bezier(.4,0,.2,1);
 }
 
+:root[data-theme="dark"] {
+  --bg0:      #0f1722;
+  --bg1:      #17212f;
+  --bg2:      #1d2a3b;
+  --surface:  #111827;
+  --text1:    #eef4ff;
+  --text2:    #c3cfde;
+  --text3:    #8fa0b7;
+  --border:   rgba(148,163,184,.16);
+  --border2:  rgba(148,163,184,.28);
+  --teal-dim: rgba(45,212,191,.16);
+  --orange-dim: rgba(251,146,60,.16);
+  --blue-dim: rgba(96,165,250,.16);
+  --green-dim: rgba(74,222,128,.16);
+  --red-dim: rgba(248,113,113,.16);
+  --purple-dim: rgba(167,139,250,.16);
+  --amber-dim: rgba(251,191,36,.16);
+  --shadow-sm:     0 1px 3px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.25);
+  --shadow:        0 10px 30px rgba(0,0,0,.28),0 0 0 1px var(--border);
+  --shadow-lg:     0 18px 56px rgba(0,0,0,.42);
+}
+
 /* ── RESET ── */
 *, *::before, *::after {
   margin: 0;

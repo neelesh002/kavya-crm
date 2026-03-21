@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 import { AGENT_PERFORMANCE, ACTIVITY_FEED } from '../data/sampleData'
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
@@ -169,7 +170,8 @@ const SCALE_STYLE = {
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { leads, tasks } = useApp()
-  const [filter, setFilter] = useState('Today')
+  const { user } = useAuth()
+  const [filter, setFilter] = useState('All Time')
   
   const [greeting, setGreeting] = useState('')
 
@@ -190,12 +192,19 @@ useEffect(() => {
 
   // ── Filtered leads ──
   const filteredLeads = leads.filter(lead => {
-    if (!lead.createdAt) return true
-    const d = new Date(lead.createdAt), now = new Date()
-    if (filter === 'Today')      return d.toDateString() === now.toDateString()
-    if (filter === 'This Week')  { const w = new Date(); w.setDate(now.getDate() - 7); return d >= w }
+    if (filter === 'All Time' || !lead.createdAt) return true
+    const d = new Date(lead.createdAt)
+    if (Number.isNaN(d.getTime())) return true
+    const now = new Date()
+    if (filter === 'Today') return d.toDateString() === now.toDateString()
+    if (filter === 'This Week') {
+      const weekStart = new Date(now)
+      weekStart.setHours(0, 0, 0, 0)
+      weekStart.setDate(now.getDate() - 7)
+      return d >= weekStart
+    }
     if (filter === 'This Month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-    if (filter === 'This Year')  return d.getFullYear() === now.getFullYear()
+    if (filter === 'This Year') return d.getFullYear() === now.getFullYear()
     return true
   })
 
@@ -225,7 +234,7 @@ useEffect(() => {
     ? `₹${(rawRevenue / 100000).toFixed(1)}L`
     : rawRevenue > 0 ? `₹${(rawRevenue / 1000).toFixed(1)}K` : '₹0'
 
-  const trendPeriod = { 'Today': 'today', 'This Week': 'this week', 'This Month': 'this month', 'This Year': 'this year' }[filter] || 'this period'
+  const trendPeriod = { 'All Time': 'overall', 'Today': 'today', 'This Week': 'this week', 'This Month': 'this month', 'This Year': 'this year' }[filter] || 'this period'
 
   // ── Stats ──
   const stats = [
@@ -266,10 +275,11 @@ useEffect(() => {
     }]
   }
 
+  const sourceKeys = ['WEBSITE', 'REFERRAL', 'SOCIAL_MEDIA', 'COLD_CALL', 'EMAIL_CAMPAIGN', 'TRADE_SHOW']
   const sourceData = {
     labels: ['Website', 'Referral', 'Social', 'Cold Call', 'Email', 'Trade Show'],
     datasets: [{
-      data: [34, 28, 19, 11, 6, 2],
+      data: sourceKeys.map(source => filteredLeads.filter(l => l.source === source).length),
       backgroundColor: ['#1AABB0','#E8701A','#3b82f6','#a78bfa','#34d399','#fb923c'],
       borderWidth: 0, hoverOffset: 5,
     }]
@@ -403,6 +413,7 @@ useEffect(() => {
           </div>
           <div className="dash-header-actions page-actions">
             <select className="form-select" style={{ width: 140 }} value={filter} onChange={e => setFilter(e.target.value)}>
+              <option>All Time</option>
               <option>Today</option>
               <option>This Week</option>
               <option>This Month</option>

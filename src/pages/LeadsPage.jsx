@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import * as XLSX from "xlsx"
@@ -9,8 +9,12 @@ import { USERS_DATA } from '../data/sampleData'
 const STATUSES = ['NEW', 'CONTACTED', 'FOLLOW_UP', 'QUALIFIED', 'CLOSED']
 const SOURCES = ['WEBSITE', 'REFERRAL', 'SOCIAL_MEDIA', 'EMAIL_CAMPAIGN', 'COLD_CALL', 'TRADE_SHOW', 'OTHER']
 const STATUS_DOT = { NEW: '#8896a8', CONTACTED: '#3b82f6', FOLLOW_UP: '#E8701A', QUALIFIED: '#7c3aed', CLOSED: '#1AABB0' }
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(0, 10)
 const normalizeScore = (value) => Math.min(100, Math.max(0, Number(value) || 0))
+const EMPTY_LEAD_FORM = { name: '', phone: '', email: '', company: '', source: 'WEBSITE', status: 'NEW', agent: 'Ananya Rao', deal: '', city: '', score: 50 }
+const ErrMsg = ({ msg }) => msg ? <span className="field-error">{msg}</span> : null
+const ic = (err) => err ? 'form-input input-error' : 'form-input'
 
 const WA_TEMPLATES = [
   { label: 'Introduction', text: (name) => `Hi ${name}! 👋 I'm reaching out from Kavya Infoweb. We offer CRM & sales automation solutions that can help grow your business. Would you be open to a quick 15-min call this week?` },
@@ -131,21 +135,64 @@ const importLeads = (event, addLead, toast) => {
 
 // ── Lead form modal ────────────────────────────────────────
 function LeadFormModal({ open, onClose, lead, onSave }) {
-  const [form, setForm] = useState(lead || { name: '', phone: '', email: '', company: '', source: 'WEBSITE', status: 'NEW', agent: 'Ananya Rao', deal: '', city: '', score: 50 })
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const { toast } = useApp()
+  const [form, setForm] = useState(lead || EMPTY_LEAD_FORM)
+  const [errors, setErrors] = useState({})
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    setErrors(e => ({ ...e, [k]: '' }))
+  }
   const agents = USERS_DATA.filter(u => u.role !== 'ADMIN')
-  const handleSubmit = e => { e.preventDefault(); onSave({ ...form, phone: normalizePhone(form.phone) }); onClose() }
+  const validate = () => {
+    const next = {}
+    const normalizedPhone = normalizePhone(form.phone)
+    const trimmedEmail = form.email.trim()
+
+    if (!form.name.trim()) next.name = 'Full name is required'
+    if (!form.company.trim()) next.company = 'Company is required'
+    if (!trimmedEmail) next.email = 'Email is required'
+    else if (!RE_EMAIL.test(trimmedEmail)) next.email = 'Enter a valid email address'
+    if (!normalizedPhone) next.phone = 'Phone number is required'
+    else if (normalizedPhone.length !== 10) next.phone = 'Phone number must be 10 digits'
+    if (form.deal !== '' && Number(form.deal) < 0) next.deal = 'Deal value cannot be negative'
+
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const handleSubmit = e => {
+    e?.preventDefault()
+    if (!validate()) {
+      toast('Please fix the errors', 'error')
+      return
+    }
+    onSave({
+      ...form,
+      name: form.name.trim(),
+      company: form.company.trim(),
+      email: form.email.trim(),
+      city: form.city.trim(),
+      phone: normalizePhone(form.phone)
+    })
+    onClose()
+  }
+
+  useEffect(() => {
+    if (!open) return
+    setForm(lead ? { ...lead } : { ...EMPTY_LEAD_FORM })
+    setErrors({})
+  }, [open, lead])
 
   return (
     <Modal open={open} onClose={onClose} title={lead ? '✏️ Edit Lead' : '➕ New Lead'} size="lg"
       footer={<><button className="btn btn-outline" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={handleSubmit}>{lead ? 'Save Changes' : 'Create Lead'}</button></>}>
       <div className="grid-2">
-        <FormGroup label="Full Name" required><input className="form-input" value={form.name} onChange={e => set('name', e.target.value)} placeholder="Rahul Mehta" required /></FormGroup>
-        <FormGroup label="Company"><input className="form-input" value={form.company} onChange={e => set('company', e.target.value)} placeholder="TechSoft Pvt Ltd" /></FormGroup>
+        <FormGroup label="Full Name" required><input className={ic(errors.name)} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Rahul Mehta" required /><ErrMsg msg={errors.name} /></FormGroup>
+        <FormGroup label="Company" required><input className={ic(errors.company)} value={form.company} onChange={e => set('company', e.target.value)} placeholder="TechSoft Pvt Ltd" /><ErrMsg msg={errors.company} /></FormGroup>
       </div>
       <div className="grid-2">
-        <FormGroup label="Email"><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="rahul@example.in" /></FormGroup>
-        <FormGroup label="Phone"><input className="form-input" value={form.phone} onChange={e => set('phone', normalizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} /></FormGroup>
+        <FormGroup label="Email" required><input className={ic(errors.email)} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="rahul@example.in" /><ErrMsg msg={errors.email} /></FormGroup>
+        <FormGroup label="Phone" required><input className={ic(errors.phone)} value={form.phone} onChange={e => set('phone', normalizePhone(e.target.value))} placeholder="9876543210" inputMode="numeric" maxLength={10} /><ErrMsg msg={errors.phone} /></FormGroup>
       </div>
       <div className="grid-2">
         <FormGroup label="Lead Source"><select className="form-select" value={form.source} onChange={e => set('source', e.target.value)}>{SOURCES.map(s => <option key={s}>{s}</option>)}</select></FormGroup>

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import {
   LEADS_DATA,
   TASKS_DATA,
+  PROJECTS_DATA,
   USERS_DATA,
   NOTIFICATIONS_DATA,
   PRODUCTS_DATA,
@@ -11,6 +12,15 @@ import {
 } from '../data/sampleData'
  
 const AppContext = createContext(null)
+
+const DEFAULT_APP_SETTINGS = {
+  darkMode: false,
+  compact: false,
+  animations: true,
+  emailNotif: true,
+  taskReminders: true,
+  smsAlerts: false,
+}
  
  
 // ─────────────────────────────
@@ -38,11 +48,13 @@ export function AppProvider({ children }) {
  
   const [leads, setLeads] = usePersistedState("crm_leads", LEADS_DATA)
   const [tasks, setTasks] = usePersistedState("crm_tasks", TASKS_DATA)
+  const [projects, setProjects] = usePersistedState("crm_projects", PROJECTS_DATA)
   const [users, setUsers] = usePersistedState("crm_users", USERS_DATA)
  
   const [products, setProducts] = usePersistedState("crm_products", PRODUCTS_DATA)
   const [targets, setTargets] = usePersistedState("crm_targets", TARGETS_DATA)
   const [invoices, setInvoices] = usePersistedState("crm_invoices", INVOICES_DATA)
+  const [appSettings, setAppSettings] = usePersistedState("crm_app_settings", DEFAULT_APP_SETTINGS)
  
   const [notifications, setNotifications] = usePersistedState("crm_notifications", NOTIFICATIONS_DATA)
  
@@ -64,6 +76,12 @@ export function AppProvider({ children }) {
       return changed ? next : prev
     })
   }, [setNotifications])
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.theme = appSettings.darkMode ? 'dark' : 'light'
+    root.style.colorScheme = appSettings.darkMode ? 'dark' : 'light'
+  }, [appSettings.darkMode])
  
  
   // ─────────────────────────────
@@ -234,6 +252,9 @@ export function AppProvider({ children }) {
         addTask,
         updateTask,
         deleteTask,
+
+        projects,
+        setProjects,
  
         users,
         setUsers,
@@ -246,6 +267,9 @@ export function AppProvider({ children }) {
  
         invoices,
         setInvoices,
+
+        appSettings,
+        setAppSettings,
  
         notifications,
         addNotification,
